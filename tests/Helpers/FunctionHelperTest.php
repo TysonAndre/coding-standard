@@ -2,6 +2,7 @@
 
 namespace SlevomatCodingStandard\Helpers;
 
+use SlevomatCodingStandard\Helpers\Annotation\Annotation;
 use const T_CLOSURE;
 use function array_map;
 

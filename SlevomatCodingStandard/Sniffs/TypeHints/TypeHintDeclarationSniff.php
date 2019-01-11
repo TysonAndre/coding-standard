@@ -4,7 +4,7 @@ namespace SlevomatCodingStandard\Sniffs\TypeHints;
 
 use PHP_CodeSniffer\Files\File;
 use PHP_CodeSniffer\Sniffs\Sniff;
-use SlevomatCodingStandard\Helpers\Annotation;
+use SlevomatCodingStandard\Helpers\Annotation\Annotation;
 use SlevomatCodingStandard\Helpers\AnnotationHelper;
 use SlevomatCodingStandard\Helpers\DocCommentHelper;
 use SlevomatCodingStandard\Helpers\FunctionHelper;
@@ -376,7 +376,7 @@ class TypeHintDeclarationSniff implements Sniff
 					&& !$this->definitionContainsItemsSpecificationForTraversable($phpcsFile, $functionPointer, $returnTypeHintDefinition)
 				)
 			) {
-				/** @var \SlevomatCodingStandard\Helpers\Annotation $returnAnnotation */
+				/** @var \SlevomatCodingStandard\Helpers\Annotation\Annotation $returnAnnotation */
 				$returnAnnotation = $returnAnnotation;
 
 				$phpcsFile->addError(

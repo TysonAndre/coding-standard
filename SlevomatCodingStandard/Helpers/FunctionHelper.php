@@ -4,6 +4,7 @@ namespace SlevomatCodingStandard\Helpers;
 
 use Generator;
 use PHP_CodeSniffer\Files\File;
+use SlevomatCodingStandard\Helpers\Annotation\Annotation;
 use const T_ANON_CLASS;
 use const T_BITWISE_AND;
 use const T_CLASS;
@@ -270,7 +271,7 @@ class FunctionHelper
 	/**
 	 * @param \PHP_CodeSniffer\Files\File $phpcsFile
 	 * @param int $functionPointer
-	 * @return \SlevomatCodingStandard\Helpers\Annotation[]
+	 * @return \SlevomatCodingStandard\Helpers\Annotation\Annotation[]
 	 */
 	public static function getParametersAnnotations(File $phpcsFile, int $functionPointer): array
 	{

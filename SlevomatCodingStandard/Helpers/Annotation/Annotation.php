@@ -1,27 +1,27 @@
 <?php declare(strict_types = 1);
 
-namespace SlevomatCodingStandard\Helpers;
+namespace SlevomatCodingStandard\Helpers\Annotation;
 
 /**
  * @internal
  */
-class Annotation
+abstract class Annotation
 {
 
 	/** @var string */
-	private $name;
+	protected $name;
 
 	/** @var int */
-	private $startPointer;
+	protected $startPointer;
 
 	/** @var int */
-	private $endPointer;
+	protected $endPointer;
 
 	/** @var string|null */
-	private $parameters;
+	protected $parameters;
 
 	/** @var string|null */
-	private $content;
+	protected $content;
 
 	public function __construct(
 		string $name,
@@ -62,5 +62,7 @@ class Annotation
 	{
 		return $this->content;
 	}
+
+	abstract public function isInvalid(): bool;
 
 }

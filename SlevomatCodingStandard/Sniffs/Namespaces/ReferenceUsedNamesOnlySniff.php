@@ -4,7 +4,9 @@ namespace SlevomatCodingStandard\Sniffs\Namespaces;
 
 use PHP_CodeSniffer\Files\File;
 use PHP_CodeSniffer\Sniffs\Sniff;
+use PHPStan\PhpDocParser\Ast\Type\UnionTypeNode;
 use SlevomatCodingStandard\Helpers\AnnotationHelper;
+use SlevomatCodingStandard\Helpers\AnnotationTypeHelper;
 use SlevomatCodingStandard\Helpers\ClassHelper;
 use SlevomatCodingStandard\Helpers\ConstantHelper;
 use SlevomatCodingStandard\Helpers\FunctionHelper;
@@ -36,14 +38,8 @@ use function array_values;
 use function constant;
 use function count;
 use function defined;
-use function explode;
 use function function_exists;
 use function in_array;
-use function ltrim;
-use function preg_quote;
-use function preg_replace_callback;
-use function preg_split;
-use function rtrim;
 use function sprintf;
 use function strtolower;
 use function substr;
@@ -311,14 +307,12 @@ class ReferenceUsedNamesOnlySniff implements Sniff
 							$phpcsFile->fixer->beginChangeset();
 
 							if ($reference->fromDocComment) {
-								$fixedDocComment = preg_replace_callback('~(\\s|\|)(' . preg_quote($name, '~') . ')(\\s|\||\[|$)~', function (array $matches): string {
-									return $matches[1] . ltrim($matches[2], '\\\\') . $matches[3];
-								}, TokenHelper::getContent($phpcsFile, $startPointer, $reference->endPointer));
+								$fixedAnnotationContent = AnnotationHelper::fixAnnotationType($phpcsFile, $reference->annotation, $reference->nameNode, substr($reference->name, 1));
 
-								for ($i = $startPointer; $i <= $reference->endPointer; $i++) {
+								$phpcsFile->fixer->replaceToken($startPointer, $fixedAnnotationContent);
+								for ($i = $startPointer + 1; $i <= $reference->endPointer; $i++) {
 									$phpcsFile->fixer->replaceToken($i, '');
 								}
-								$phpcsFile->fixer->addContent($startPointer, $fixedDocComment);
 							} else {
 								$phpcsFile->fixer->replaceToken($startPointer, substr($tokens[$startPointer]['content'], 1));
 							}
@@ -395,19 +389,15 @@ class ReferenceUsedNamesOnlySniff implements Sniff
 
 							$phpcsFile->fixer->beginChangeset();
 
-							for ($i = $startPointer; $i <= $reference->endPointer; $i++) {
-								$phpcsFile->fixer->replaceToken($i, '');
+							if ($reference->fromDocComment) {
+								$fixedAnnotationContent = AnnotationHelper::fixAnnotationType($phpcsFile, $reference->annotation, $reference->nameNode, $nameToReference);
+								$phpcsFile->fixer->replaceToken($startPointer, $fixedAnnotationContent);
+							} else {
+								$phpcsFile->fixer->replaceToken($startPointer, $nameToReference);
 							}
 
-							if ($reference->fromDocComment) {
-								$fixedDocComment = preg_replace_callback('~(\\s|\|)' . preg_quote($name, '~') . '(\\s|\||\[|$)~', function (array $matches) use ($nameToReference): string {
-									return $matches[1] . $nameToReference . $matches[2];
-								}, TokenHelper::getContent($phpcsFile, $startPointer, $reference->endPointer));
-
-								$phpcsFile->fixer->addContent($startPointer, $fixedDocComment);
-
-							} else {
-								$phpcsFile->fixer->addContent($startPointer, $nameToReference);
+							for ($i = $startPointer + 1; $i <= $reference->endPointer; $i++) {
+								$phpcsFile->fixer->replaceToken($i, '');
 							}
 
 							if (!$alreadyUsed) {
@@ -526,28 +516,37 @@ class ReferenceUsedNamesOnlySniff implements Sniff
 					continue;
 				}
 
+				/** @var \SlevomatCodingStandard\Helpers\Annotation\VariableAnnotation|\SlevomatCodingStandard\Helpers\Annotation\ParameterAnnotation|\SlevomatCodingStandard\Helpers\Annotation\ReturnAnnotation|\SlevomatCodingStandard\Helpers\Annotation\ThrowsAnnotation|\SlevomatCodingStandard\Helpers\Annotation\PropertyAnnotation $annotation */
 				foreach ($annotationsByName as $annotation) {
 					if ($annotation->getContent() === null) {
 						continue;
 					}
 
-					$typesAsString = preg_split('~\\s+~', $annotation->getContent())[0];
-					$types = explode('|', $typesAsString);
-					foreach ($types as $type) {
-						$type = rtrim($type, '[]');
-						$lowercasedType = strtolower($type);
+					if ($annotation->isInvalid()) {
+						continue;
+					}
 
+					$annotationType = $annotation->getType();
+					$typeNodes = $annotationType instanceof UnionTypeNode ? $annotationType->types : [$annotationType];
+
+					foreach ($typeNodes as $typeNode) {
+						$typeHintNode = AnnotationTypeHelper::getTypeHintNode($typeNode);
+						$typeHint = AnnotationTypeHelper::getTypeHintFromNode($typeHintNode);
+
+						$lowercasedTypeHint = strtolower($typeHint);
 						if (
-							TypeHintHelper::isSimpleTypeHint($lowercasedType)
-							|| TypeHintHelper::isSimpleUnofficialTypeHints($lowercasedType)
-							|| !TypeHelper::isTypeName($type)
+							TypeHintHelper::isSimpleTypeHint($lowercasedTypeHint)
+							|| TypeHintHelper::isSimpleUnofficialTypeHints($lowercasedTypeHint)
+							|| !TypeHelper::isTypeName($typeHint)
 						) {
 							continue;
 						}
 
 						$reference = new stdClass();
 						$reference->fromDocComment = true;
-						$reference->name = $type;
+						$reference->annotation = $annotation;
+						$reference->nameNode = $typeHintNode;
+						$reference->name = $typeHint;
 						$reference->type = ReferencedName::TYPE_DEFAULT;
 						$reference->startPointer = $annotation->getStartPointer();
 						$reference->endPointer = $annotation->getEndPointer();

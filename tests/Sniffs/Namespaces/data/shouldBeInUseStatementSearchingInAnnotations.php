@@ -51,4 +51,12 @@ abstract class Bar
 	 */
 	abstract function abstractMethod(Something $something);
 
+	/**
+	 * @param $parameter
+	 */
+	public function invalidAnnotation($parameter)
+	{
+
+	}
+
 }
